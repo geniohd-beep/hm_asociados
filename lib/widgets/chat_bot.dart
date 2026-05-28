@@ -26,6 +26,7 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
   String _userName = '';
   String _userPhone = '';
   String _caseType = '';
+  String _caseDescription = '';
   bool _awaitingCaseDescription = false;
   bool _isTyping = false;
   bool _initialized = false;
@@ -175,6 +176,7 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
         String response;
 
         if (_awaitingCaseDescription) {
+          _caseDescription = text;
           await Future.delayed(const Duration(milliseconds: 800));
           response = _generateDetailedResponse(_caseType, text);
           _awaitingCaseDescription = false;
@@ -354,11 +356,33 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
     }
   }
 
+  String get caseTypeLabel {
+    const labels = {
+      'corporativo': 'Corporativo',
+      'laboral': 'Laboral',
+      'tributario': 'Tributario',
+      'familia': 'Familia',
+      'inmobiliario': 'Inmobiliario',
+      'propiedad intelectual': 'Propiedad Intelectual',
+      'litigio': 'Litigio y Arbitraje',
+      'banca': 'Banca y Finanzas',
+      'regulatorio': 'Regulatorio',
+      'civil': 'Civil',
+      'constitucional': 'Constitucional',
+      'penal': 'Penal',
+    };
+    final saved = _caseType.isEmpty ? (_messages.length >= 4 ? _detectCaseType(_messages.map((m) => m.text).join(' ')) : '') : _caseType;
+    return labels[saved] ?? saved;
+  }
+
   Future<void> _openWhatsApp() async {
     final phone = '+51926678446';
+    final caseInfo = _caseDescription.isNotEmpty
+        ? '\n\n*Tipo de caso:* $caseTypeLabel\n*Descripción:* $_caseDescription'
+        : '';
     final message = Uri.encodeComponent(
       'Hola, soy $_userName. Me comunico desde la app de HM & Asociados. '
-      'Mi celular es $_userPhone. Quisiera recibir más información.',
+      'Mi celular es $_userPhone. Quisiera recibir más información.$caseInfo',
     );
 
     final webUri = Uri.parse('https://wa.me/$phone?text=$message');
@@ -392,6 +416,7 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
       _userName = '';
       _userPhone = '';
       _caseType = '';
+      _caseDescription = '';
       _awaitingCaseDescription = false;
     });
     _addBotMessage(
@@ -420,9 +445,13 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
       userPhone = '+51$userPhone';
     }
 
+    final caseInfo = _caseDescription.isNotEmpty
+        ? '📂 *Tipo de caso:* ${caseTypeLabel}\n📝 *Descripción:* $_caseDescription\n'
+        : '';
     final header = '📋 *Resumen de Conversación*\n'
         '👤 Cliente: $_userName\n'
         '📱 Celular: $_userPhone\n'
+        '$caseInfo'
         '━━━━━━━━━━━━━━━━━━\n\n';
 
     final firmMsg = Uri.encodeComponent('$header$conversation');
@@ -474,6 +503,7 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
         _userName = '';
         _userPhone = '';
         _caseType = '';
+        _caseDescription = '';
         _awaitingCaseDescription = false;
       });
       _addBotMessage(
