@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:hm_asociados/theme/app_theme.dart';
@@ -24,6 +25,8 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
   _ChatStep _step = _ChatStep.askingName;
   String _userName = '';
   String _userPhone = '';
+  String _caseType = '';
+  bool _awaitingCaseDescription = false;
   bool _isTyping = false;
   bool _initialized = false;
 
@@ -152,11 +155,16 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
         Future.delayed(const Duration(milliseconds: 500), () {
           _addBotMessage(
             '¡Gracias $_userName! Sus datos han sido registrados.\n\n'
-            'Ahora, ¿en qué puedo ayudarle? Puede preguntarme sobre:\n'
-            '• **Áreas de práctica**: Corporativo, Tributario, Laboral, Familia, etc.\n'
-            '• **Agendar una consulta**\n'
-            '• **Ubicación y horarios**\n\n'
-            'También puede usar el botón **WhatsApp** para contactarnos directamente.',
+            '¿Qué **tipo de caso** le gustaría consultar? Por ejemplo:\n'
+            '• **Corporativo** (empresas, contratos)\n'
+            '• **Tributario** (impuestos, SUNAT)\n'
+            '• **Laboral** (trabajo, empleados)\n'
+            '• **Familia** (divorcio, sucesiones)\n'
+            '• **Penal** (delitos, defensa)\n'
+            '• **Civil** (contratos, propiedades)\n'
+            '• **Inmobiliario** (terrenos, alquileres)\n'
+            '• **Propiedad Intelectual** (marcas, patentes)\n'
+            '• **Otro**',
           );
         });
 
@@ -166,7 +174,12 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
 
         String response;
 
-        if (widget.aiService != null && widget.aiService!.isConfigured) {
+        if (_awaitingCaseDescription) {
+          await Future.delayed(const Duration(milliseconds: 800));
+          response = _generateDetailedResponse(_caseType, text);
+          _awaitingCaseDescription = false;
+          _caseType = '';
+        } else if (widget.aiService != null && widget.aiService!.isConfigured) {
           final history = _messages
               .where((m) => _messages.indexOf(m) < _messages.length - 1)
               .map((m) => {
@@ -186,66 +199,61 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
           response = _generateRuleBasedResponse(text);
         }
 
-        await Future.delayed(const Duration(milliseconds: 600));
         if (mounted) {
           setState(() => _isTyping = false);
-          _addBotMessage('$response\n\n'
-              'Si desea que un asesor lo contacte, presione el botón **WhatsApp** abajo.');
+          _addBotMessage(response);
         }
     }
   }
 
+  String _detectCaseType(String msg) {
+    if (msg.contains('corporativo') || msg.contains('empresa') || msg.contains('mercantil')) return 'corporativo';
+    if (msg.contains('laboral') || msg.contains('trabajo') || msg.contains('empleado')) return 'laboral';
+    if (msg.contains('tributario') || msg.contains('fiscal') || msg.contains('impuesto') || msg.contains('sunat')) return 'tributario';
+    if (msg.contains('familia') || msg.contains('divorcio') || msg.contains('sucesión') || msg.contains('heredero') || msg.contains('alimento')) return 'familia';
+    if (msg.contains('inmobiliario') || msg.contains('propiedad') || msg.contains('terreno') || msg.contains('alquiler')) return 'inmobiliario';
+    if (msg.contains('propiedad intelectual') || msg.contains('marca') || msg.contains('patente') || msg.contains('indecopi')) return 'propiedad intelectual';
+    if (msg.contains('arbitraje') || msg.contains('litigio') || msg.contains('juicio') || msg.contains('penal')) return 'litigio';
+    if (msg.contains('banca') || msg.contains('finanza') || msg.contains('fintech') || msg.contains('sbs')) return 'banca';
+    if (msg.contains('regulatorio') || msg.contains('osiptel') || msg.contains('osinergmin') || msg.contains('sunass')) return 'regulatorio';
+    if (msg.contains('civil') || msg.contains('contrato') || msg.contains('responsabilidad')) return 'civil';
+    if (msg.contains('constitucional') || msg.contains('amparo') || msg.contains('habeas')) return 'constitucional';
+    return '';
+  }
+
   String _generateRuleBasedResponse(String userMessage) {
     final msg = userMessage.toLowerCase();
+    final detectedType = _detectCaseType(msg);
 
-    if (msg.contains('corporativo') || msg.contains('empresa') || msg.contains('mercantil')) {
-      return 'Nuestra práctica de Derecho Corporativo incluye constitución de empresas, '
-          'fusiones y adquisiciones, gobierno corporativo y contratos comerciales. '
-          'Contamos con amplia experiencia asesorando a empresas nacionales e internacionales en el Perú.';
+    if (detectedType.isNotEmpty && !_awaitingCaseDescription) {
+      _caseType = detectedType;
+      _awaitingCaseDescription = true;
+
+      final typeNames = {
+        'corporativo': 'Derecho Corporativo',
+        'laboral': 'Derecho Laboral',
+        'tributario': 'Derecho Tributario',
+        'familia': 'Derecho de Familia',
+        'inmobiliario': 'Derecho Inmobiliario',
+        'propiedad intelectual': 'Propiedad Intelectual',
+        'litigio': 'Litigio y Arbitraje',
+        'banca': 'Banca y Finanzas',
+        'regulatorio': 'Derecho Regulatorio',
+        'civil': 'Derecho Civil',
+        'constitucional': 'Derecho Constitucional',
+      };
+
+      final typeName = typeNames[detectedType] ?? detectedType;
+      return 'Entiendo que su consulta está relacionada con **$typeName**.\n\n'
+          'Para poder brindarle una orientación más precisa, ¿podría **describirme brevemente su caso**? '
+          'Cuénteme qué situación específica está enfrentando y con gusto le daré información relevante.';
     }
-    if (msg.contains('laboral') || msg.contains('trabajo') || msg.contains('empleado')) {
-      return 'En Derecho Laboral ofrecemos asesoría en contratación laboral, '
-          'despidos, negociaciones colectivas y cumplimiento de normativas laborales peruanas. '
-          'También brindamos defensa en procesos ante el Ministerio de Trabajo.';
-    }
-    if (msg.contains('fiscal') || msg.contains('tributario') || msg.contains('impuesto') || msg.contains('sunat')) {
-      return 'Nuestro equipo de Derecho Tributario lo asesora en planificación fiscal, '
-          'defensa ante SUNAT, cumplimiento de obligaciones tributarias y '
-          'recursos administrativos y judiciales en materia tributaria.';
-    }
-    if (msg.contains('familia') || msg.contains('divorcio') || msg.contains('sucesión') || msg.contains('heredero')) {
-      return 'En Derecho de Familia brindamos asesoría en divorcios, tenencia, '
-          'alimentos, regímenes patrimoniales, sucesiones y testamentos. '
-          'Acompañamos a nuestras clientas y clientes con sensibilidad y profesionalismo.';
-    }
-    if (msg.contains('inmobiliario') || msg.contains('propiedad') || msg.contains('terreno') || msg.contains('alquiler')) {
-      return 'Nuestra área de Derecho Inmobiliario cubre compraventa de inmuebles, '
-          'arrendamientos, contratos de construcción, due diligence inmobiliario '
-          'y regularización de propiedades en todo el Perú.';
-    }
-    if (msg.contains('propiedad intelectual') || msg.contains('marca') || msg.contains('patente') || msg.contains('indecopi')) {
-      return 'En Propiedad Intelectual lo asesoramos en registro de marcas y patentes ante INDECOPI, '
-          'protección de derechos de autor, contratos de licencia y defensa contra la piratería.';
-    }
-    if (msg.contains('arbitraje') || msg.contains('litigio') || msg.contains('juicio') || msg.contains('penal')) {
-      return 'Contamos con un equipo de litigantes de primer nivel. Ofrecemos representación '
-          'en procesos judiciales y arbitrajes nacionales e internacionales. '
-          'Tenemos experiencia en litigios civiles, comerciales, penales y constitucionales.';
-    }
-    if (msg.contains('banca') || msg.contains('finanza') || msg.contains('fintech') || msg.contains('sbs')) {
-      return 'Nuestra área de Banca y Finanzas ofrece estructuración de financiamientos, '
-          'operaciones bancarias, mercado de valores y cumplimiento regulatorio ante la SBS. '
-          'También asesoramos a empresas fintech y de banca digital.';
-    }
-    if (msg.contains('regulatorio') || msg.contains('osiptel') || msg.contains('osinergmin') || msg.contains('sunass')) {
-      return 'En Derecho Regulatorio brindamos asesoría en cumplimiento normativo ante organismos '
-          'reguladores peruanos como OSIPTEL, OSINERGMIN y SUNASS, incluyendo defensa en '
-          'procedimientos administrativos sancionadores.';
-    }
+
     if (msg.contains('consulta') || msg.contains('cita') || msg.contains('agendar')) {
       return 'Puede agendar una consulta llamándonos al +51 (1) 555-1234 o escribiéndonos a '
           'contacto@hm-asociados.pe. Nuestro horario de atención es lunes a viernes de 9:00 a 18:00 hrs. '
-          'También puede visitarnos en nuestra oficina principal en San Isidro, Lima.';
+          'También puede visitarnos en nuestra oficina principal en San Isidro, Lima.\n\n'
+          '¿Quiere que lo contactemos? Use el botón **WhatsApp** abajo.';
     }
     if (msg.contains('ubicación') || msg.contains('dirección') || msg.contains('dónde') || msg.contains('oficina')) {
       return 'Nuestra oficina principal está ubicada en:\n'
@@ -280,6 +288,72 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
         '• Derecho Constitucional';
   }
 
+  String _generateDetailedResponse(String caseType, String description) {
+    final desc = description.toLowerCase();
+
+    switch (caseType) {
+      case 'corporativo':
+        if (desc.contains('constituir') || desc.contains('crear') || desc.contains('formar')) {
+          return 'Gracias por compartir los detalles. En HM & Asociados podemos ayudarlo con la **constitución de empresas** en todos los tipos societarios (SA, SAC, SRL). El proceso incluye la elaboración de la minuta, la escritura pública y la inscripción en SUNARP. El plazo aproximado es de 7 a 15 días hábiles.\n\n'
+              '¿Desea agendar una consulta para que un abogado corporativo evalúe su caso en detalle?';
+        }
+        if (desc.contains('contrato') || desc.contains('acuerdo')) {
+          return 'Entendemos que requiere asesoría en **contratos comerciales**. Nuestro equipo de Derecho Corporativo tiene amplia experiencia en la redacción, negociación y revisión de contratos de diversa naturaleza: compraventa, prestación de servicios, confidencialidad, joint ventures, entre otros.\n\n'
+              'Cada contrato debe adaptarse a las necesidades específicas de su operación. ¿Podría indicarnos qué tipo de contrato necesita?';
+        }
+        return 'Gracias por contarnos su situación. Nuestra práctica de **Derecho Corporativo** incluye constitución de empresas, fusiones y adquisiciones, gobierno corporativo, contratos comerciales y due diligence. Contamos con amplia experiencia asesorando a empresas nacionales e internacionales en el Perú.\n\n'
+            '¿Desea que un abogado especializado se comunique con usted para evaluar su caso? Use el botón **WhatsApp** abajo.';
+
+      case 'laboral':
+        if (desc.contains('despido') || desc.contains('despedir') || desc.contains('cesar')) {
+          return 'Lamento conocer su situación. En cuanto a **despidos**, la legislación peruana distingue entre despido arbitrario, despido nulo y despido justificado. La indemnización por despido arbitrario es de 1.5 remuneraciones por año de servicios (máximo 12). Si el despido fue nulo (discriminación, represalia), procede la reposición.\n\n'
+              'Recomendamos que un abogado laboral revise los detalles específicos de su caso. ¿Desea contactarnos por WhatsApp para una primera orientación?';
+        }
+        if (desc.contains('contratar') || desc.contains('planilla') || desc.contains('registrar')) {
+          return 'En materia de **contratación laboral**, es importante cumplir con todas las obligaciones formales: registro en planilla electrónica (T-Registro y PLAME), afiliación a EsSalud y al sistema de pensiones, y elaboración del contrato de trabajo por escrito cuando la ley lo exige.\n\n'
+              'El incumplimiento de estas obligaciones puede generar multas significativas. Lo invitamos a agendar una consulta para revisar su situación particular.';
+        }
+        return 'Nuestra práctica de **Derecho Laboral** cubre contratación laboral, despidos, negociaciones colectivas, hostilidad laboral, defensa ante el Ministerio de Trabajo y cumplimiento de normativas laborales peruanas. Cada caso es único y merece un análisis personalizado.\n\n'
+            '¿Quiere que uno de nuestros abogados laborales evalúe su caso? Use el botón **WhatsApp** para contactarnos.';
+
+      case 'tributario':
+        if (desc.contains('sunat') || desc.contains('fiscalización') || desc.contains('multa') || desc.contains('sanción')) {
+          return 'Una **fiscalización de SUNAT** puede ser un proceso complejo. Es fundamental contar con asesoría legal especializada para la atención de los requerimientos, la preparación de la documentación y, de ser necesario, la defensa en procedimientos contencioso-tributarios.\n\n'
+              'Nuestro equipo tributario tiene experiencia en defensa ante SUNAT y en recursos de reclamación y apelación ante el Tribunal Fiscal. ¿Desea que lo contactemos para evaluar su caso?';
+        }
+        return 'Nuestro equipo de **Derecho Tributario** lo asesora en planificación fiscal, defensa ante SUNAT, cumplimiento de obligaciones tributarias, devolución de saldos a favor y recursos administrativos y judiciales en materia tributaria.\n\n'
+            'La legislación tributaria peruana es compleja y está en constante cambio. Lo invitamos a una consulta para revisar su situación específica.';
+
+      case 'familia':
+        if (desc.contains('divorcio') || desc.contains('separación')) {
+          return 'En cuanto a **divorcios**, el Código Civil peruano contempla el divorcio por causal y el divorcio por mutuo acuerdo. La separación de hecho por 2 años (o 1 año si hay hijos) es una causal frecuente. El proceso implica la liquidación de la sociedad de gananciales y, de ser el caso, la pensión de alimentos.\n\n'
+              'Acompañamos a nuestros clientes con sensibilidad y profesionalismo. ¿Desea agendar una consulta para evaluar su caso?';
+        }
+        return 'Nuestra práctica de **Derecho de Familia** incluye divorcios, tenencia y régimen de visitas, pensión alimenticia, sucesiones y testamentos, y planeación patrimonial familiar. Entendemos la sensibilidad de estos temas y brindamos un acompañamiento cercano y profesional.\n\n'
+            '¿Quiere contarnos más sobre su situación? Estamos para ayudarlo.';
+
+      case 'inmobiliario':
+        return 'Nuestra área de **Derecho Inmobiliario** cubre compraventa de inmuebles, arrendamientos, contratos de construcción, due diligence inmobiliario y regularización de propiedades en todo el Perú.\n\n'
+            'Las transacciones inmobiliarias requieren una revisión cuidadosa de títulos, cargas y gravámenes. ¿Desea que un especialista revise su caso?';
+
+      case 'litigio':
+        return 'Nuestro equipo de **Litigio y Arbitraje** cuenta con amplia experiencia en procesos judiciales y arbitrales en materia civil, comercial, penal y constitucional. Ofrecemos representación en todas las instancias, incluyendo la Corte Suprema.\n\n'
+            'Cada caso requiere una estrategia procesal específica. Lo invitamos a una consulta para analizar su situación.';
+
+      case 'propiedad intelectual':
+        return 'En **Propiedad Intelectual** lo asesoramos en registro de marcas y patentes ante INDECOPI, protección de derechos de autor, contratos de licencia y defensa contra la piratería. La protección de sus activos intangibles es fundamental para su negocio.\n\n'
+            '¿Desea que lo contactemos para evaluar su caso?';
+
+      case 'civil':
+        return 'Nuestra práctica de **Derecho Civil** abarca contratos, responsabilidad civil, prescripción, derechos reales (propiedad, posesión), obligaciones y arrendamientos. Brindamos asesoría preventiva y representación en procesos contenciosos.\n\n'
+            '¿Quiere contarnos más detalles para poder orientarlo mejor?';
+
+      default:
+        return 'Gracias por compartir los detalles de su caso. En HM & Asociados contamos con especialistas en todas las áreas del derecho. Para brindarle una atención más precisa, le sugiero contactarnos directamente.\n\n'
+            'Puede comunicarse al **+51 (1) 555-1234** o presionar el botón **WhatsApp** para que un asesor lo contacte a la brevedad.';
+    }
+  }
+
   Future<void> _openWhatsApp() async {
     final phone = '+51926678446';
     final message = Uri.encodeComponent(
@@ -287,21 +361,26 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
       'Mi celular es $_userPhone. Quisiera recibir más información.',
     );
 
+    final webUri = Uri.parse('https://wa.me/$phone?text=$message');
+
     try {
-      final waUri = Uri.parse('whatsapp://send?phone=$phone&text=$message');
-      await launchUrl(waUri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      try {
-        final webUri = Uri.parse('https://wa.me/$phone?text=$message');
+      if (kIsWeb) {
         await launchUrl(webUri, mode: LaunchMode.externalApplication);
-      } catch (_) {
-        _addBotMessage(
-          'No se pudo abrir WhatsApp automáticamente.\n\n'
-          'Puede escribirnos manualmente al **+51 926 678 446** '
-          'con el mensaje: "Hola, soy $_userName. Celular: $_userPhone. '
-          'Quisiera recibir más información."',
-        );
+      } else {
+        try {
+          final waUri = Uri.parse('whatsapp://send?phone=$phone&text=$message');
+          await launchUrl(waUri, mode: LaunchMode.externalApplication);
+        } catch (_) {
+          await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        }
       }
+    } catch (_) {
+      _addBotMessage(
+        'No se pudo abrir WhatsApp automáticamente.\n\n'
+        'Puede escribirnos manualmente al **+51 926 678 446** '
+        'con el mensaje: "Hola, soy $_userName. Celular: $_userPhone. '
+        'Quisiera recibir más información."',
+      );
     }
   }
 
@@ -312,6 +391,8 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
       _step = _ChatStep.askingName;
       _userName = '';
       _userPhone = '';
+      _caseType = '';
+      _awaitingCaseDescription = false;
     });
     _addBotMessage(
       '¡Bienvenido a HM & Asociados! Soy su asistente virtual.\n\n'
