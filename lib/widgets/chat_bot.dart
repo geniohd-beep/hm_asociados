@@ -400,6 +400,89 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
     );
   }
 
+  String _formatConversation() {
+    final buffer = StringBuffer();
+    for (final msg in _messages) {
+      final role = msg.isUser ? '👤 Cliente' : '⚖️  HM & Asociados';
+      final time = msg.formattedTime;
+      buffer.writeln('$role ($time):');
+      buffer.writeln(msg.text);
+      buffer.writeln('');
+    }
+    return buffer.toString();
+  }
+
+  Future<void> _sendAndFinish() async {
+    final conversation = _formatConversation();
+    final firmPhone = '+51926678446';
+    var userPhone = _userPhone.trim();
+    if (!userPhone.startsWith('+')) {
+      userPhone = '+51$userPhone';
+    }
+
+    final header = '📋 *Resumen de Conversación*\n'
+        '👤 Cliente: $_userName\n'
+        '📱 Celular: $_userPhone\n'
+        '━━━━━━━━━━━━━━━━━━\n\n';
+
+    final firmMsg = Uri.encodeComponent('$header$conversation');
+    final userMsg = Uri.encodeComponent(
+      '✅ Gracias por comunicarte con HM & Asociados, $_userName.\n\n'
+      'Hemos recibido el resumen de tu consulta y te contactaremos pronto al 📱 $_userPhone.\n\n'
+      'Puedes seguir conversando con nosotros aquí cuando lo necesites.',
+    );
+
+    final firmUri = Uri.parse('https://wa.me/$firmPhone?text=$firmMsg');
+    final userUri = Uri.parse('https://wa.me/$userPhone?text=$userMsg');
+
+    try {
+      if (kIsWeb) {
+        await launchUrl(firmUri, mode: LaunchMode.externalApplication);
+        await Future.delayed(const Duration(seconds: 1));
+        try {
+          await launchUrl(userUri, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      } else {
+        try {
+          final waFirm = Uri.parse('whatsapp://send?phone=$firmPhone&text=$firmMsg');
+          await launchUrl(waFirm, mode: LaunchMode.externalApplication);
+        } catch (_) {
+          await launchUrl(firmUri, mode: LaunchMode.externalApplication);
+        }
+        await Future.delayed(const Duration(seconds: 1));
+        try {
+          final waUser = Uri.parse('whatsapp://send?phone=$userPhone&text=$userMsg');
+          await launchUrl(waUser, mode: LaunchMode.externalApplication);
+        } catch (_) {
+          try {
+            await launchUrl(userUri, mode: LaunchMode.externalApplication);
+          } catch (_) {}
+        }
+      }
+    } catch (_) {
+      _addBotMessage(
+        'No se pudo abrir WhatsApp automáticamente.\n\n'
+        'Puede contactarnos al **+51 926 678 446** para recibir atención personalizada.',
+      );
+    }
+
+    await ChatPersistence.clearAll();
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _step = _ChatStep.askingName;
+        _userName = '';
+        _userPhone = '';
+        _caseType = '';
+        _awaitingCaseDescription = false;
+      });
+      _addBotMessage(
+        '¡Bienvenido a HM & Asociados! Soy su asistente virtual.\n\n'
+        'Antes de brindarle información, ¿podría indicarme su **nombre** por favor?',
+      );
+    }
+  }
+
   Widget _buildTypingIndicator() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -499,18 +582,39 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
         if (_step == _ChatStep.chatting)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _openWhatsApp,
-                icon: const Icon(Icons.chat, size: 18),
-                label: const Text('CONTACTAR POR WHATSAPP'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF25D366),
-                  side: const BorderSide(color: Color(0xFF25D366)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _openWhatsApp,
+                    icon: const Icon(Icons.chat, size: 18),
+                    label: const Text('CONTACTAR POR WHATSAPP'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF25D366),
+                      side: const BorderSide(color: Color(0xFF25D366)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _sendAndFinish,
+                    icon: const Icon(Icons.check_circle, size: 20),
+                    label: const Text('TERMINAR'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         Container(
