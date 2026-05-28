@@ -377,19 +377,14 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
 
   Future<void> _openWhatsApp() async {
     final phone = '+51926678446';
-    final caseInfo = _caseDescription.isNotEmpty
-        ? '\n\n*Tipo de caso:* $caseTypeLabel\n*Descripción:* $_caseDescription'
-        : '';
-    final message = Uri.encodeComponent(
-      'Hola, soy $_userName. Me comunico desde la app de HM & Asociados. '
-      'Mi celular es $_userPhone. Quisiera recibir más información.$caseInfo',
-    );
+    final msgText = '*Nombre:* $_userName\n*Celular:* $_userPhone\n*Tipo:* $caseTypeLabel\n*Caso:* $_caseDescription\n\nGracias por contactarnos, le atenderemos a la brevedad. HM & Asociados.';
+    final message = Uri.encodeComponent(msgText);
 
     final webUri = Uri.parse('https://wa.me/$phone?text=$message');
 
     try {
       if (kIsWeb) {
-        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        await launchUrl(webUri, mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank');
       } else {
         try {
           final waUri = Uri.parse('whatsapp://send?phone=$phone&text=$message');
@@ -401,9 +396,7 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
     } catch (_) {
       _addBotMessage(
         'No se pudo abrir WhatsApp automáticamente.\n\n'
-        'Puede escribirnos manualmente al **+51 926 678 446** '
-        'con el mensaje: "Hola, soy $_userName. Celular: $_userPhone. '
-        'Quisiera recibir más información."',
+        'Puede contactarnos al **+51 926 678 446** para recibir atención.',
       );
     }
   }
@@ -425,36 +418,15 @@ class _ChatBotState extends State<ChatBot> with TickerProviderStateMixin {
     );
   }
 
-  String _formatConversation() {
-    final buffer = StringBuffer();
-    for (final msg in _messages) {
-      final role = msg.isUser ? '👤 Cliente' : '⚖️  HM & Asociados';
-      final time = msg.formattedTime;
-      buffer.writeln('$role ($time):');
-      buffer.writeln(msg.text);
-      buffer.writeln('');
-    }
-    return buffer.toString();
-  }
-
   Future<void> _sendAndFinish() async {
-    final conversation = _formatConversation();
     final firmPhone = '+51926678446';
     var userPhone = _userPhone.trim();
     if (!userPhone.startsWith('+')) {
       userPhone = '+51$userPhone';
     }
 
-    final caseInfo = _caseDescription.isNotEmpty
-        ? '📂 *Tipo de caso:* ${caseTypeLabel}\n📝 *Descripción:* $_caseDescription\n'
-        : '';
-    final header = '📋 *Resumen de Conversación*\n'
-        '👤 Cliente: $_userName\n'
-        '📱 Celular: $_userPhone\n'
-        '$caseInfo'
-        '━━━━━━━━━━━━━━━━━━\n\n';
-
-    final firmMsg = Uri.encodeComponent('$header$conversation');
+    final summary = '*Nombre:* $_userName\n*Celular:* $_userPhone\n*Tipo:* $caseTypeLabel\n*Caso:* $_caseDescription\n\nGracias por contactarnos, le atenderemos a la brevedad. HM & Asociados.';
+    final firmMsg = Uri.encodeComponent(summary);
     final userMsg = Uri.encodeComponent(
       '✅ Gracias por comunicarte con HM & Asociados, $_userName.\n\n'
       'Hemos recibido el resumen de tu consulta y te contactaremos pronto al 📱 $_userPhone.\n\n'

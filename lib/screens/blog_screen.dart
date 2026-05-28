@@ -55,76 +55,79 @@ class _BlogScreenState extends State<BlogScreen> {
   Widget build(BuildContext context) {
     final filtered = _filteredPosts;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('BLOG JURÍDICO')),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Buscar artículos...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              onChanged: (v) => setState(() => _searchQuery = v),
-            ),
-          ),
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                _FilterChip(
-                  label: 'TODOS',
-                  selected: _selectedCategory == null,
-                  onTap: () => setState(() => _selectedCategory = null),
+    return Material(
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar artículos...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
-                ..._categories.map((c) => _FilterChip(
-                      label: c.toUpperCase(),
-                      selected: _selectedCategory == c,
-                      onTap: () => setState(() => _selectedCategory = _selectedCategory == c ? null : c),
-                    )),
-              ],
+                onChanged: (v) => setState(() => _searchQuery = v),
+              ),
             ),
-          ),
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.search_off, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No se encontraron artículos',
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      return _BlogCard(post: filtered[index]);
-                    },
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                children: [
+                  _FilterChip(
+                    label: 'TODOS',
+                    selected: _selectedCategory == null,
+                    onTap: () => setState(() => _selectedCategory = null),
                   ),
-          ),
-        ],
+                  ..._categories.map((c) => _FilterChip(
+                        label: c.toUpperCase(),
+                        selected: _selectedCategory == c,
+                        onTap: () => setState(() => _selectedCategory = _selectedCategory == c ? null : c),
+                      )),
+                ],
+              ),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.search_off, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No se encontraron artículos',
+                            style: TextStyle(color: AppTheme.textMuted, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        return _BlogCard(post: filtered[index]);
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -12,17 +12,16 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final servicesKey = GlobalKey();
-    final contactKey = GlobalKey();
 
-    return Scaffold(
-      body: SingleChildScrollView(
+    return Material(
+      child: SingleChildScrollView(
         child: Column(
           children: [
-            _HeroSection(servicesKey: servicesKey, contactKey: contactKey),
+            _HeroSection(servicesKey: servicesKey),
             _AboutSection(),
             _ServicesSection(key: servicesKey),
             _StatsSection(),
-            _ContactSection(key: contactKey),
+            _ChatContactSection(),
           ],
         ),
       ),
@@ -32,9 +31,8 @@ class HomeScreen extends StatelessWidget {
 
 class _HeroSection extends StatelessWidget {
   final GlobalKey servicesKey;
-  final GlobalKey contactKey;
 
-  const _HeroSection({required this.servicesKey, required this.contactKey});
+  const _HeroSection({required this.servicesKey});
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +95,7 @@ class _HeroSection extends StatelessWidget {
               ),
               _HeroButton(
                 label: 'CONTACTO',
-                onTap: () => _scrollTo(context, contactKey),
+                onTap: () => _openChat(context),
               ),
             ],
           ),
@@ -116,6 +114,61 @@ class _HeroSection extends StatelessWidget {
       );
     }
   }
+}
+
+void _openChat(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.surfaceDark,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryDark,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.smart_toy, color: AppTheme.primaryGold, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Asistente HM',
+                    style: TextStyle(
+                      color: AppTheme.primaryGold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                child: ChatBot(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _HeroButton extends StatelessWidget {
@@ -302,101 +355,45 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-class _ContactSection extends StatelessWidget {
-  const _ContactSection({super.key});
-
+class _ChatContactSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
-      color: AppTheme.surfaceDark,
+      color: AppTheme.primaryDark,
       child: Column(
         children: [
           Text(
-            'CONTACTO',
+            '¿Necesita asesoría legal?',
             style: GoogleFonts.cinzel(
-              fontSize: 28,
+              fontSize: 24,
               color: AppTheme.primaryGold,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Container(width: 60, height: 2, color: AppTheme.primaryGold),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              'Chatee con nuestro asistente virtual',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textMuted,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 400,
-            child: Card(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: ChatBot(),
-              ),
+          const SizedBox(height: 16),
+          Text(
+            'Chatee con nuestro asistente virtual HM para recibir\norientación legal personalizada.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppTheme.textLight,
+              height: 1.5,
             ),
           ),
           const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 16),
-          _ContactItem(
-            icon: Icons.location_on,
-            text: 'Av. Paseo de la República 3587\nSan Isidro, Lima 15047',
-          ),
-          const SizedBox(height: 12),
-          _ContactItem(
-            icon: Icons.phone,
-            text: '+51 (1) 555-1234',
-          ),
-          const SizedBox(height: 12),
-          _ContactItem(
-            icon: Icons.email,
-            text: 'contacto@hm-asociados.pe',
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Horario: Lunes a Viernes 9:00 - 18:00 hrs',
-            style: GoogleFonts.inter(
-              color: AppTheme.textMuted,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContactItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _ContactItem({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppTheme.primaryGold, size: 24),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              text,
-              style: GoogleFonts.inter(
-                color: AppTheme.textDark,
-                fontSize: 15,
-              ),
+          ElevatedButton.icon(
+            onPressed: () => _openChat(context),
+            icon: const Icon(Icons.chat, size: 20),
+            label: const Text('CONTACTAR POR CHAT'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ],
