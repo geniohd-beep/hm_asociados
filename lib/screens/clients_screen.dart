@@ -15,11 +15,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
   int _nextId = 1;
 
   void _addClient(Client client) {
-    setState(() => _clients.add(client));
-  }
-
-  void _deleteClient(String id) {
-    setState(() => _clients.removeWhere((c) => c.id == id));
+    _clients.add(client);
   }
 
   void _showAddDialog() {
@@ -112,103 +108,39 @@ class _ClientsScreenState extends State<ClientsScreen> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Row(
-              children: [
-                Text(
-                  '${_clients.length} cliente${_clients.length == 1 ? '' : 's'}',
-                  style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
-                ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: _showAddDialog,
-                  icon: const Icon(Icons.person_add, size: 18),
-                  label: const Text('REGISTRARSE COMO CLIENTE'),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 16),
-          Expanded(
-            child: _clients.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.people_outline, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.4)),
-                        const SizedBox(height: 16),
-                        Text('No hay clientes registrados',
-                            style: TextStyle(color: AppTheme.textMuted, fontSize: 16)),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: _showAddDialog,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Registrarse como cliente'),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    itemCount: _clients.length,
-                    itemBuilder: (_, i) => _ClientCard(
-                      client: _clients[i],
-                      onDelete: () => _deleteClient(_clients[i].id),
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClientCard extends StatelessWidget {
-  final Client client;
-  final VoidCallback onDelete;
-
-  const _ClientCard({required this.client, required this.onDelete});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Icon(Icons.person, color: AppTheme.primaryGold, size: 20),
-                const SizedBox(width: 8),
-                Text(client.name,
-                    style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark)),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                  onPressed: onDelete,
-                ),
-              ],
+            Icon(Icons.people_outline, size: 64, color: AppTheme.primaryGold.withValues(alpha: 0.6)),
+            const SizedBox(height: 16),
+            Text(
+              'Registro de Clientes',
+              style: GoogleFonts.cinzel(
+                fontSize: 22,
+                color: AppTheme.primaryGold,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const Divider(height: 12),
-            if (client.phone.isNotEmpty) ...[
-              _InfoRow(icon: Icons.phone, text: client.phone),
-              const SizedBox(height: 4),
-            ],
-            if (client.address.isNotEmpty) ...[
-              _InfoRow(icon: Icons.location_on, text: client.address),
-              const SizedBox(height: 4),
-            ],
-            if (client.cases.isNotEmpty) ...[
-              _InfoRow(icon: Icons.folder, text: client.cases),
-            ],
+            const SizedBox(height: 8),
+            Container(width: 60, height: 2, color: AppTheme.primaryGold),
+            const SizedBox(height: 16),
+            Text(
+              'Gestión interna de clientes',
+              style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: _showAddDialog,
+              icon: const Icon(Icons.person_add, size: 20),
+              label: const Text('REGISTRARSE COMO CLIENTE'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.primaryGold,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
       ),
@@ -216,23 +148,4 @@ class _ClientCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
 
-  const _InfoRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: AppTheme.textMuted),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(text, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textDark)),
-        ),
-      ],
-    );
-  }
-}

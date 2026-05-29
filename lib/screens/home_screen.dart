@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hm_asociados/theme/app_theme.dart';
@@ -5,6 +6,7 @@ import 'package:hm_asociados/widgets/service_card.dart';
 import 'package:hm_asociados/widgets/chat_bot.dart';
 import 'package:hm_asociados/models/services_data.dart';
 import 'package:hm_asociados/screens/blog_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -288,7 +290,8 @@ class _ServicesSection extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.primaryGold,
                 side: const BorderSide(color: AppTheme.primaryGold),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -396,6 +399,21 @@ class _ChatContactSection extends StatelessWidget {
               textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
+          if (kIsWeb) ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () => launchUrl(Uri.parse('apk/hm_asociados.apk')),
+              icon: const Icon(Icons.android, size: 16, color: AppTheme.textMuted),
+              label: Text(
+                'Descargar APK',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
